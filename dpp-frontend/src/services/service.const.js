@@ -33,7 +33,8 @@ const IDP_URL = "http://172.21.0.11:8080/";
 
 // Get urls that can be empty
 let serverUrl = "HOST_URL";
-let backendUrl = "http://172.21.0.11:8888/";
+// let backendUrl = "http://172.21.0.11:8888/";
+let backendUrl = "http://localhost:9999/";
 let retries = 'APP_API_MAX_RETRIES';
 let searchTimeout = 'API_SEARCH_TIMEOUT';
 let negotiateTimeout = 'API_NEGOTIATE_TIMEOUT';
