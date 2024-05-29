@@ -1,0 +1,29 @@
+{
+  "@id": "73af176d-bc46-4cc2-80e2-423c0c6fb244",
+  "@type": "TransferProcess",
+  "state": "STARTED",
+  "stateTimestamp": 1715192724130,
+  "type": "CONSUMER",
+  "callbackAddresses": {
+    "@type": "CallbackAddress",
+    "transactional": false,
+    "uri": "https://callback.address.com/endpoint",
+    "events": "transfer.process"
+  },
+  "correlationId": "caa51b56-b4db-4f36-b95d-8de56d1cbe7e",
+  "assetId": "dpp-asset",
+  "contractId": "1ce31703-bca2-4cd0-809c-b716fba61c03",
+  "transferType": "HttpData-PULL",
+  "dataDestination": {
+    "@type": "DataAddress",
+    "type": "HttpProxy"
+  },
+  "@context": {
+    "@vocab": "https://w3id.org/edc/v0.0.1/ns/",
+    "edc": "https://w3id.org/edc/v0.0.1/ns/",
+    "tx": "https://w3id.org/tractusx/v0.0.1/ns/",
+    "tx-auth": "https://w3id.org/tractusx/auth/",
+    "cx-policy": "https://w3id.org/catenax/policy/",
+    "odrl": "http://www.w3.org/ns/odrl/2/"
+  }
+}

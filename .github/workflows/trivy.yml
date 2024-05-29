@@ -1,0 +1,211 @@
+#################################################################################
+# Tractus-X - Digital Product Passport Application
+#
+# Copyright (c) 2022, 2024 BMW AG, Henkel AG & Co. KGaA
+# Copyright (c) 2023, 2024 CGI Deutschland B.V. & Co. KG
+# Copyright (c) 2022, 2024 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License, Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the
+# License for the specific language govern in permissions and limitations
+# under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#################################################################################
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: "Trivy"
+
+on:
+  push:
+    branches: [ "main" ]
+  schedule:
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+      inputs:
+        branch:
+          description: "Branch to use"
+          required: true
+          default: "main"
+          type: string
+
+env:
+  REGISTRY: 'ghcr.io'
+  IMAGE_NAMESPACE: 'tractusx'
+  FRONTEND_IMAGE_NAME: "digital-product-pass-frontend"
+  BACKEND_IMAGE_NAME: "digital-product-pass-backend"
+  JAVA_VERSION: 19
+
+jobs:
+  analyze-config:
+    runs-on: "ubuntu-latest"
+    permissions:
+      actions: read
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          ignore-unfixed: true
+          hide-progress: false
+          format: "sarif"
+          output: "trivy-results1.sarif"
+          severity: "CRITICAL,HIGH"
+          args: "--ignorefile .trivyignore"
+          skip-dirs: "deployment/infrastructure/data-consumer/edc-consumer,deployment/infrastructure/data-provider/edc-provider,deployment/infrastructure/data-provider/edc-provider/data-service,deployment/infrastructure/data-provider/registry"  # skip scanning external images.
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results1.sarif"
+
+  analyze-digital-product-pass-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build frontend image from Dockerfile - GHCR
+        id: build-docker-frontend-ghcr
+        if: ${{ github.repository != 'eclipse-tractusx/digital-product-pass' }}
+        run: |
+          cd dpp-frontend
+          docker build -t ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.FRONTEND_IMAGE_NAME }}:latest .
+
+        # Build action for docker hub registry
+      - name: Build frontend image from Dockerfile - Docker Hub
+        id: build-docker-frontend-dockerhub
+        if: ${{ github.repository == 'eclipse-tractusx/digital-product-pass' }}
+        run: |
+          cd dpp-frontend
+          docker build -t ${{ env.IMAGE_NAMESPACE }}/${{ env.FRONTEND_IMAGE_NAME }}:latest .
+
+      - name: Run Trivy vulnerability scanner - GHCR
+        id: run-trivy-vulnerability-scanner-frontend-ghcr
+        if: ${{ github.repository != 'eclipse-tractusx/digital-product-pass' }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.REGISTRY }}/${{ github.repository }}/${{ env.FRONTEND_IMAGE_NAME }}"
+          format: "sarif"
+          ignore-unfixed: true
+          output: "trivy-results-dpp-frontend.sarif"
+          hide-progress: false
+          severity: "CRITICAL,HIGH"
+          args: "--ignorefile .trivyignore"
+      
+      # Build action for docker hub registry
+      - name: Run Trivy vulnerability scanner - Docker Hub
+        id: run-trivy-vulnerability-scanner-frontend-dockerhub
+        if: ${{ github.repository == 'eclipse-tractusx/digital-product-pass' }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.IMAGE_NAMESPACE }}/${{ env.FRONTEND_IMAGE_NAME }}"
+          ignore-unfixed: true
+          format: "sarif"
+          output: "trivy-results-dpp-frontend.sarif"
+          hide-progress: false
+          severity: "CRITICAL,HIGH"
+          args: "--ignorefile .trivyignore"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results-dpp-frontend.sarif"
+
+  analyze-digital-product-pass-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "${{ env.JAVA_VERSION }}"
+          distribution: "temurin"
+          
+      # Build Java code with Maven
+      - name: Build JAR
+        run: |
+          cd dpp-backend/digitalproductpass
+          mvn -B clean install
+
+      - name: Build backend image from Dockerfile - GHCR
+        id: build-docker-backend-ghcr
+        if: ${{ github.repository != 'eclipse-tractusx/digital-product-pass' }}
+        run: |
+          cd dpp-backend/digitalproductpass
+          docker build -t ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.BACKEND_IMAGE_NAME }}:latest .
+
+        # Build action for docker hub registry
+      - name: Build backend image from Dockerfile - Docker Hub
+        id: build-docker-backend-dockerhub
+        if: ${{ github.repository == 'eclipse-tractusx/digital-product-pass' }}
+        run: |
+          cd dpp-backend/digitalproductpass
+          docker build -t ${{ env.IMAGE_NAMESPACE }}/${{ env.BACKEND_IMAGE_NAME }}:latest .
+
+      - name: Run Trivy vulnerability scanner - GHCR
+        id: run-trivy-vulnerability-scanner-backend-ghcr
+        if: ${{ github.repository != 'eclipse-tractusx/digital-product-pass' }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.REGISTRY }}/${{ github.repository }}/${{ env.BACKEND_IMAGE_NAME }}"
+          format: "sarif"
+          ignore-unfixed: true
+          output: "trivy-results-dpp-backend.sarif"
+          hide-progress: false
+          severity: "CRITICAL,HIGH"
+          args: "--ignorefile .trivyignore"
+
+        # Build action for docker hub registry
+      - name: Run Trivy vulnerability scanner - Docker Hub
+        id: run-trivy-vulnerability-scanner-backend-dockerhub
+        if: ${{ github.repository == 'eclipse-tractusx/digital-product-pass' }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ env.IMAGE_NAMESPACE }}/${{ env.BACKEND_IMAGE_NAME }}"
+          format: "sarif"
+          ignore-unfixed: true
+          output: "trivy-results-dpp-backend.sarif"
+          hide-progress: false
+          severity: "CRITICAL,HIGH"
+          args: "--ignorefile .trivyignore"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results-dpp-backend.sarif"
+

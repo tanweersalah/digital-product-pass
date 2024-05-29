@@ -1,0 +1,135 @@
+#################################################################################
+# Tractus-X - Digital Product Passport Application
+#
+# Copyright (c) 2022, 2024 BMW AG, Henkel AG & Co. KGaA
+# Copyright (c) 2023, 2024 CGI Deutschland B.V. & Co. KG
+# Copyright (c) 2022, 2024 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License, Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied. See the
+# License for the specific language govern in permissions and limitations
+# under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#################################################################################
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontend.name }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+      component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+        component: frontend
+    spec:
+      {{- with .Values.frontend.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.frontend.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.frontend.name }}
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.frontend.securityContext | nindent 12 }}
+          env:          
+            {{- with (first .Values.frontend.ingress.hosts) }}
+            - name: "SERVER_URL"
+              value: "https://{{ .host }}"
+            {{- end }}
+
+            - name: "KEYCLOAK_CLIENTID"
+              value: "{{ .Values.oauth.appId }}"
+
+            - name: "KEYCLOAK_REALM"
+              value: "{{ .Values.oauth.realm }}"
+            
+            - name: "KEYCLOAK_ONLOAD"
+              value: "{{ .Values.oauth.onLoad }}"
+
+            - name: "AUTH_ROLE_CHECK"
+              value: "{{ .Values.oauth.roleCheck.enabled | default false }}"
+
+            - name: "AUTH_BPN_CHECK"
+              value: "{{ .Values.oauth.bpnCheck.enabled | default false }}"
+
+            - name: "AUTH_BPN_NUMBER"
+              value: "{{ .Values.oauth.bpnCheck.bpn }}"
+
+            - name: "APP_AUTO_SIGN"
+              value: "{{ .Values.frontend.negotiation.autoSign }}"
+
+            - name: "APP_PORTAL_URL"
+              value: "https://{{ .Values.frontend.portal.hostname }}"
+
+            - name: "APP_ADMIN_EMAIL"
+              value: "{{ .Values.frontend.supportContact.adminEmail }}"
+
+            - name: "BACKEND_URL"
+              value: "https://{{ .Values.frontend.backend.hostname }}"
+
+            - name: "IDP_URL"
+              value: "https://{{ .Values.oauth.hostname }}"
+
+            - name: "API_NEGOTIATE_TIMEOUT"
+              value: "{{ .Values.frontend.api.timeout.negotiate }}"
+
+            - name: "API_SEARCH_TIMEOUT"
+              value: "{{ .Values.frontend.api.timeout.search }}"
+            
+            - name: "API_DECLINE_TIMEOUT"
+              value: "{{ .Values.frontend.api.timeout.decline }}"
+            
+            - name: "API_MAX_RETRIES"
+              value: "{{ .Values.frontend.api.max_retries }}"
+
+            - name: "IRS_DELAY"
+              value: "{{ .Values.frontend.irs.requestDelay }}"
+
+            - name: "IRS_MAX_WAITING_TIME"
+              value: "{{ .Values.frontend.irs.maxWaitingTime }}"
+
+            - name: "API_DELAY"
+              value: "{{ .Values.frontend.api.delay }}"
+
+            - name: "VERSION"
+              value: "{{ .Chart.AppVersion }}"
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
