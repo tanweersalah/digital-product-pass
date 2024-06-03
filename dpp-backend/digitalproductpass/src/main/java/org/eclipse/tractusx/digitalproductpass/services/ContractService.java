@@ -453,6 +453,8 @@ public class ContractService extends BaseService {
             }
             // Check for processId
             String processId = tokenRequestBody.getProcessId();
+            
+            processManager.createProcess(processId, httpRequest);
             if (!processManager.checkProcess(httpRequest, processId)) {
                 response = httpUtil.getBadRequest("The process id does not exists!");
                 return httpUtil.buildResponse(response, httpResponse);

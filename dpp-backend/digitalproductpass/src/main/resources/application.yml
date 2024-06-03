@@ -44,17 +44,17 @@ configuration:
   keycloak:
     realm: miw_test
     resource: Cl13-CX-Battery
-    tokenUri: 'http://172.21.0.11:8080/realms/miw_test/protocol/openid-connect/token'
-    userInfoUri: 'http://172.21.0.11:8080/realms/miw_test/protocol/openid-connect/userinfo'
+    tokenUri: 'http://keycloak:8080/realms/miw_test/protocol/openid-connect/token'
+    userInfoUri: 'http://keycloak:8080/realms/miw_test/protocol/openid-connect/userinfo'
 
   edc:
-    endpoint: 'http://172.21.0.11:8181'
+    endpoint: 'http://localhost:8181'
     readiness: '/api/check/readiness'
     management: '/management/v2'
     catalog: '/catalog/request'
     negotiation: '/contractnegotiations'
     transfer: '/transferprocesses'
-    receiverEndpoint: 'http://172.21.0.11:9999/endpoint'
+    receiverEndpoint: 'http://host.docker.internal:9999/endpoint'
     delay:  100 # -- Negotiation status Delay in milliseconds in between async requests [<= 500]
     transferType: "HttpData-PULL"
     timeout:
@@ -72,7 +72,7 @@ configuration:
       header: "X-Api-Key"
 
   irs:
-    enabled: true
+    enabled: false
     endpoint: "https://materialpass-irs.int.demo.catena-x.net"
     paths:
       job: "/irs/jobs"
@@ -120,7 +120,7 @@ configuration:
       lifetime: 12 # -- Hours
 
   discovery:
-    endpoint: "http://172.21.0.11:4245/api/v1.0/administration/connectors/discovery/search"
+    endpoint: "http://localhost:4245/api/v1.0/administration/connectors/discovery/search"
     bpn:
       key: "manufacturerPartId"
       searchPath: "/api/v1.0/administration/connectors/bpnDiscovery/search"
@@ -134,7 +134,7 @@ configuration:
     delay: 1000
 
   process:
-    store: true
+    store: false
     dir: 'process'
     indent: true
     signKey: 'c55e3f35200f6afedbce37cefdaf40eadd15c92814edfdbc4d6ab0eacdcdd56dbcd5a2a34ca4b675084d33f9f479d7d79347795148aaf4443e1b47ab96b27e72'

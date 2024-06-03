@@ -105,7 +105,7 @@ public class ProcessManager {
             ProcessDataModel processDataModel = (ProcessDataModel) httpUtil.getSessionValue(httpRequest, this.processDataModelName);
             if (processDataModel == null) {
                 processDataModel = new ProcessDataModel();
-                this.httpUtil.setSessionValue(httpRequest, "processDataModel", processDataModel);
+                this.httpUtil.setSessionValue(httpRequest, this.processDataModelName, processDataModel);
                 LogUtil.printMessage("[PROCESS] Process Data Model created for Session ["+this.httpUtil.getSessionId(httpRequest)+"], the server is ready to start processing requests...");
             }
             return processDataModel;
@@ -379,6 +379,7 @@ public class ProcessManager {
         LogUtil.printMessage("Process Created [" + process.id + "], waiting for user to sign or decline...");
         this.setProcess(httpRequest, process); // Add process to session storage
         this.newStatusFile(process.id, connectorAddress, createdTime, true); // Set the status from the process in file system logs.
+        
         return process;
     }
 
@@ -503,6 +504,16 @@ public class ProcessManager {
         LogUtil.printMessage("Process Created [" + process.id + "], waiting for user to sign or decline...");
         this.setProcess(httpRequest, process); // Add process to session storage
         this.newStatusFile(process.id,"", createdTime, true); // Set the status from the process in file system logs.
+        
+
+        ProcessDataModel processDataModel = (ProcessDataModel) httpUtil.getSessionValue(httpRequest, this.processDataModelName);
+        if (processDataModel == null) {
+            processDataModel = new ProcessDataModel();
+            processDataModel.addProcess(process);
+            this.httpUtil.setSessionValue(httpRequest, this.processDataModelName, processDataModel);
+            LogUtil.printMessage("[PROCESS] Process Data Model created for Session ["+this.httpUtil.getSessionId(httpRequest)+"], the server is ready to start processing requests...");
+        }
+        
         return process;
     }
     /**
